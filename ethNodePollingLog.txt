@@ -1,0 +1,5 @@
+
+Program started. Time UTC is : 2018-05-12 22:29:00 +00:00. Block polling every 10 minutes
+volume is 0.20711045457124028 | transaction count is 29
+volume is 0.09725325767445087 | transaction count is 26
+volume is 0.05335565361869159 | transaction count is 14
