@@ -11,33 +11,45 @@ update();
 
 async function update() {
 	try{	
-	var blockAmount = 5//43 //block time of 14s.  10 minutes interval = > 42.8 blocks		
-	let latestBlock = await web3.eth.getBlock('latest', true);
-	let latestBlockNumber = latestBlock.number;
-	let blocksDataPromises=[];
-	for (var i=1; i<blockAmount;i++) {
-		blocksDataPromises.push(web3.eth.getBlock(latestBlockNumber - i, true));			
-	}
-	let blocksData = await Promise.all(blocksDataPromises);
-	blocksData.unshift(latestBlock);
-	let volume =0;
-	let transactionCount=0;
-	contractsArray.forEach((contract) =>{
-		blocksData.forEach((block)=>{
-			console.log('processsing block ' + block.number);
-			block.transactions.forEach((transaction)=>{
-				if (transaction.to != null) {
-					if (transaction.to.toLowerCase() == contract || transaction.from.toLowerCase() == contract) {
-						volume += Number( web3.utils.fromWei(transaction.value, 'ether'));
-						transactionCount+=1;
-					}
+		let timeIntervalLimit = 60 * 10; //10 minutes time interval
+		let timeInterval = 0;
+	
+		let currentBlock = await web3.eth.getBlock('latest', true);
+		let latestTimestamp = currentBlock.timestamp;
+		let currentBlockNumber = currentBlock.number;
+	        
+		let volume = 0;
+	        let transactionCount = 0;
+	
+		//exact block number which is out of time window is unknown
+		while (timeInterval < timeIntervalLimit) {
+			for(var i=0; i<contractsArray.length;i++){
+				let contractAddress = contractsArray[i];
+				for(var j=0; j<currentBlock.transactions.length;j++){
+					let transaction = currentBlock.transactions[j];
+					if (transaction.to != null) {
+                                                if (transaction.to.toLowerCase() == contractAddress || transaction.from.toLowerCase() == contractAddress) {
+                                                        //verify if the transaction succeeded
+                                                        let receipt = await web3.eth.getTransactionReceipt(transaction.hash);
+                                                        let txStatus =  receipt.status;
+                                                        if (txStatus == true) {
+                                                       		volume += Number( web3.utils.fromWei(transaction.value, 'ether'));
+                                                        	transactionCount+=1;
+							}
+                                                }   
+                                        }   
+					
 				}
-			});
-		});
-	});
-	console.log('volume is ' + volume, 'transaction count is ' + transactionCount);
-		
+			}
+			currentBlockNumber -= 1;
+			currentBlock = await web3.eth.getBlock(currentBlockNumber, true);
+			timeInterval = latestTimestamp - currentBlock.timestamp;
+		}
+	
+		console.log('volume is ' + volume, 'transaction count is ' + transactionCount);
+			
 	} catch(e){ 
 		console.log(e);	
 	}
+
 }
